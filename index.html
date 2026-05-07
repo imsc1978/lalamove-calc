@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v8</title>
+<title>接單效益計算 v9</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -422,7 +422,9 @@ async function getGPS(){
 
 /* ── Google Geocoding ─────────────────── */
 async function geocode(addr){
-  const q = (addr.includes('台灣')||addr.includes('臺灣')) ? addr : addr + ', 台灣';
+  // 統一繁簡：臺→台，確保Google API識別
+  const normalized = addr.replace(/臺/g, '台');
+  const q = normalized.includes('台灣') ? normalized : normalized + ', 台灣';
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW&region=TW`;
   const res = await fetch(url);
   const d   = await res.json();
