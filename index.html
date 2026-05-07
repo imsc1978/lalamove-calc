@@ -53,20 +53,22 @@ text-transform:uppercase;margin:18px 0 8px;}
 .dot-me{background:#4da3ff;}.dot-pick{background:var(–orange);}.dot-drop{background:var(–green);}
 .loc-lbl{font-size:11px;color:var(–muted2);width:38px;flex-shrink:0;}
 .loc-input{
-flex:1;background:var(–card2);border:1px solid var(–border);border-radius:10px;
+flex:1;background:#1a1a1a;border:1px solid var(–border);border-radius:10px;
 color:#ffffff !important;font-size:13px;font-family:‘Noto Sans TC’,sans-serif;
 padding:10px 11px;outline:none;transition:border-color .2s;min-width:0;
 -webkit-text-fill-color:#ffffff !important;
 caret-color:#ffffff;
+appearance:none;-webkit-appearance:none;
 }
-.loc-input:focus{border-color:var(–orange);}
-.loc-input::placeholder{color:var(–muted);-webkit-text-fill-color:var(–muted);}
+.loc-input:focus{border-color:var(–orange);background:#1a1a1a;}
+.loc-input::placeholder{color:#555;-webkit-text-fill-color:#555;}
 .loc-input:-webkit-autofill,
 .loc-input:-webkit-autofill:focus{
--webkit-box-shadow:0 0 0 100px var(–card2) inset !important;
+-webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
 -webkit-text-fill-color:#ffffff !important;
+background:#1a1a1a !important;
 }
-.loc-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
+.loc-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22 !important;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
 .gps-btn{
 background:var(–card2);border:1px solid var(–border);border-radius:10px;
 color:var(–muted2);font-size:18px;width:40px;height:40px;min-width:40px;
