@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v4</title>
+<title>接單效益計算 v5</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -324,6 +324,8 @@ let myCoords = null;
   if(drop){ document.getElementById('dropLoc').value = decodeURIComponent(drop); document.getElementById('dropLoc').classList.add('hi'); hasAuto=true; }
   if(fee) { document.getElementById('fee').value = decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
   if(hasAuto) document.getElementById('autoBanner').classList.add('show');
+  // 初始化 toggle 顏色
+  document.getElementById('deadTog').style.background = '#FF6B00';
 })();
 
 /* ── 速度 ─────────────────────────────── */
@@ -418,38 +420,50 @@ async function getGPS(){
   );
 }
 
-/* ── 地址查詢：photon + Nominatim 雙重備援 ── */
+/* ── 地址查詢：三重備援 ── */
 async function geocode(addr){
   const clean = addr.trim()
     .replace(/^台灣[,，\s]*/,'')
     .replace(/^臺灣[,，\s]*/,'')
     .replace(/臺/g,'台');
 
-  // 1. photon.komoot.io（OSM，對亞洲地址更好）
-  try{
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(clean+' 台灣')}&limit=1&lang=zh`;
-    const res  = await fetch(url, {signal: AbortSignal.timeout(6000)});
-    const data = await res.json();
-    if(data.features && data.features.length > 0){
-      const [lng, lat] = data.features[0].geometry.coordinates;
-      return { lat, lng };
+  const apis = [
+    // 1. Nominatim（繁體中文＋Taiwan）
+    async () => {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean + ' Taiwan')}&format=json&limit=3&countrycodes=tw`;
+      const r = await fetch(url, {headers:{'User-Agent':'LalamoveCalc/1.0','Accept-Language':'zh-TW,zh'}, signal:AbortSignal.timeout(8000)});
+      const d = await r.json();
+      if(d && d.length > 0) return {lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon)};
+    },
+    // 2. Nominatim（英文地址格式）
+    async () => {
+      // 把中文數字轉成查詢友好格式
+      const q = clean + ', Taipei, Taiwan';
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+      const r = await fetch(url, {headers:{'User-Agent':'LalamoveCalc/1.0'}, signal:AbortSignal.timeout(8000)});
+      const d = await r.json();
+      if(d && d.length > 0) return {lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon)};
+    },
+    // 3. photon.komoot.io
+    async () => {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(clean)}&limit=1&bbox=119,21,123,26`;
+      const r = await fetch(url, {signal:AbortSignal.timeout(6000)});
+      const d = await r.json();
+      if(d.features?.length > 0){
+        const [lng,lat] = d.features[0].geometry.coordinates;
+        return {lat,lng};
+      }
     }
-  } catch(e){}
+  ];
 
-  // 2. Nominatim 備用（用英文格式提高命中率）
-  try{
-    // 把中文區名轉為拼音式查詢格式
-    const q = clean.replace(/市/g,' ').replace(/區/g,' ').replace(/路/g,' Rd').replace(/街/g,' St') + ', Taiwan';
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean+', Taiwan')}&format=json&limit=1&countrycodes=tw`;
-    const res = await fetch(url, {
-      headers:{'User-Agent':'LalamoveCalc/1.0'},
-      signal: AbortSignal.timeout(8000)
-    });
-    const d = await res.json();
-    if(d && d.length > 0) return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
-  } catch(e){}
+  for(const api of apis){
+    try{
+      const result = await api();
+      if(result) return result;
+    } catch(e){}
+  }
 
-  throw new Error('地址查詢失敗：' + addr + '\n請確認地址格式，例如：台北市士林區德行西路50號');
+  throw new Error('地址查詢失敗：' + addr);
 }
 
 /* ── 距離計算（Haversine × 1.35 路網修正） ── */
