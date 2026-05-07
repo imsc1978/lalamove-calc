@@ -87,20 +87,22 @@ border:1px solid var(–border);border-radius:6px;padding:2px 8px;}
 .param-item{display:flex;flex-direction:column;gap:5px;}
 .param-lbl{font-size:11px;color:var(–muted2);}
 .param-input{
-background:var(–card2);border:1px solid var(–border);border-radius:10px;
+background:#1a1a1a;border:1px solid var(–border);border-radius:10px;
 color:#ffffff !important;font-size:16px;font-family:‘Noto Sans TC’,sans-serif;
 padding:10px 12px;outline:none;width:100%;transition:border-color .2s;
 -webkit-text-fill-color:#ffffff !important;
 caret-color:#ffffff;
+appearance:none;-webkit-appearance:none;
 }
-.param-input:focus{border-color:var(–orange);}
-.param-input::placeholder{color:var(–muted);-webkit-text-fill-color:var(–muted);}
+.param-input:focus{border-color:var(–orange);background:#1a1a1a;}
+.param-input::placeholder{color:#555555;-webkit-text-fill-color:#555555;}
 .param-input:-webkit-autofill,
 .param-input:-webkit-autofill:focus{
--webkit-box-shadow:0 0 0 100px var(–card2) inset !important;
+-webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
 -webkit-text-fill-color:#ffffff !important;
+background:#1a1a1a !important;
 }
-.param-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
+.param-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22 !important;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
 
 .speed-row{display:flex;gap:6px;margin-top:6px;}
 .speed-btn{
@@ -413,27 +415,25 @@ async function getGPS(){
   );
 }
 
-/* ── Google Geocoding ─────────────────── */
+/* ── Nominatim Geocoding（免費，不需API Key） ── */
 async function geocode(addr){
-  const q = (addr.includes('台灣')||addr.includes('Taiwan')) ? addr : addr+', 台灣';
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW&region=TW`;
-  const res = await fetch(url);
+  const q = (addr.includes('台灣')||addr.includes('Taiwan')||addr.includes('台北')||addr.includes('新北')||addr.includes('桃園')) ? addr : addr+', 台灣';
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=tw&accept-language=zh-TW`;
+  const res = await fetch(url, { headers:{'Accept-Language':'zh-TW'} });
   const d   = await res.json();
-  if(d.status !== 'OK') throw new Error('地址查詢失敗：'+addr+' ('+d.status+')');
-  const loc = d.results[0].geometry.location;
-  return { lat: loc.lat, lng: loc.lng };
+  if(!d || d.length === 0) throw new Error('地址查詢失敗，請確認地址格式：'+addr);
+  return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
 }
 
-/* ── Google Directions API 真實路網距離 ── */
+/* ── 距離計算（Haversine × 1.35 路網修正） ── */
 async function roadKm(a, b){
-  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&mode=driving&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`;
+  // 先嘗試 OSRM 免費路網距離
   try{
+    const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
     const res  = await fetch(url);
     const data = await res.json();
-    if(data.status === 'OK'){
-      let meters = 0;
-      data.routes[0].legs.forEach(leg => meters += leg.distance.value);
-      return meters / 1000;
+    if(data.code === 'Ok' && data.routes?.[0]){
+      return data.routes[0].distance / 1000;
     }
   } catch(e){}
   // fallback：Haversine × 1.35
