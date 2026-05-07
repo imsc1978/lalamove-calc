@@ -163,8 +163,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 .bk.total .bk-v{color:var(–orange);font-weight:700;font-size:15px;}
 </style>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&libraries=places" async defer></script>
-
 </head>
 <body>
 <div class="app">
@@ -387,9 +385,9 @@ async function getGPS(){
       btn.textContent = '✅';
       banner.classList.remove('show');
 
-      fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${myCoords.lat},${myCoords.lng}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`)
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${myCoords.lat}&lon=${myCoords.lng}&format=json&accept-language=zh-TW`)
         .then(r=>r.json()).then(d=>{
-          const addr = d.results?.[0]?.formatted_address || `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
+          const addr = d.display_name || `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
           document.getElementById('myLoc').value = addr;
         }).catch(()=>{
           document.getElementById('myLoc').value = `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
