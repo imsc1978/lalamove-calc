@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v5</title>
+<title>接單效益計算 v8</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -249,7 +249,7 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
   </div>
   <div class="toggle-row">
     <span class="toggle-lbl">含空跑時間</span>
-    <div class="toggle on" id="deadTog" onclick="toggleDead()"><div class="toggle-knob"></div></div>
+    <div class="toggle on" id="deadTog" onclick="toggleDead()" style="background:#FF6B00"><div class="toggle-knob"></div></div>
   </div>
 </div>
 
@@ -420,61 +420,26 @@ async function getGPS(){
   );
 }
 
-/* ── 地址查詢：三重備援 ── */
+/* ── Google Geocoding ─────────────────── */
 async function geocode(addr){
-  const clean = addr.trim()
-    .replace(/^台灣[,，\s]*/,'')
-    .replace(/^臺灣[,，\s]*/,'')
-    .replace(/臺/g,'台');
-
-  const apis = [
-    // 1. Nominatim（繁體中文＋Taiwan）
-    async () => {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean + ' Taiwan')}&format=json&limit=3&countrycodes=tw`;
-      const r = await fetch(url, {headers:{'User-Agent':'LalamoveCalc/1.0','Accept-Language':'zh-TW,zh'}, signal:AbortSignal.timeout(8000)});
-      const d = await r.json();
-      if(d && d.length > 0) return {lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon)};
-    },
-    // 2. Nominatim（英文地址格式）
-    async () => {
-      // 把中文數字轉成查詢友好格式
-      const q = clean + ', Taipei, Taiwan';
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
-      const r = await fetch(url, {headers:{'User-Agent':'LalamoveCalc/1.0'}, signal:AbortSignal.timeout(8000)});
-      const d = await r.json();
-      if(d && d.length > 0) return {lat:parseFloat(d[0].lat), lng:parseFloat(d[0].lon)};
-    },
-    // 3. photon.komoot.io
-    async () => {
-      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(clean)}&limit=1&bbox=119,21,123,26`;
-      const r = await fetch(url, {signal:AbortSignal.timeout(6000)});
-      const d = await r.json();
-      if(d.features?.length > 0){
-        const [lng,lat] = d.features[0].geometry.coordinates;
-        return {lat,lng};
-      }
-    }
-  ];
-
-  for(const api of apis){
-    try{
-      const result = await api();
-      if(result) return result;
-    } catch(e){}
-  }
-
-  throw new Error('地址查詢失敗：' + addr);
+  const q = (addr.includes('台灣')||addr.includes('臺灣')) ? addr : addr + ', 台灣';
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW&region=TW`;
+  const res = await fetch(url);
+  const d   = await res.json();
+  if(d.status !== 'OK') throw new Error('地址查詢失敗：' + addr + '（' + d.status + '）');
+  return { lat: d.results[0].geometry.location.lat, lng: d.results[0].geometry.location.lng };
 }
 
-/* ── 距離計算（Haversine × 1.35 路網修正） ── */
+/* ── Google Directions API 路網距離 ─── */
 async function roadKm(a, b){
-  // 先嘗試 OSRM 免費路網距離
   try{
-    const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&mode=driving&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`;
     const res  = await fetch(url);
     const data = await res.json();
-    if(data.code === 'Ok' && data.routes?.[0]){
-      return data.routes[0].distance / 1000;
+    if(data.status === 'OK'){
+      let meters = 0;
+      data.routes[0].legs.forEach(leg => meters += leg.distance.value);
+      return meters / 1000;
     }
   } catch(e){}
   // fallback：Haversine × 1.35
