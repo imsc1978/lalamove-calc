@@ -29,6 +29,18 @@ display:none;align-items:center;gap:10px;
 .auto-banner-text{font-size:13px;color:var(–green);}
 .auto-banner-text b{display:block;font-size:14px;margin-bottom:2px;}
 
+/* 定位提示橫幅 */
+.geo-banner{
+background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.3);
+border-radius:12px;padding:12px 14px;margin-bottom:12px;
+display:none;align-items:flex-start;gap:10px;
+}
+.geo-banner.show{display:flex;}
+.geo-banner-text{font-size:13px;color:var(–orange);line-height:1.5;}
+.geo-banner-text b{display:block;font-size:14px;margin-bottom:4px;color:#fff;}
+.geo-steps{margin-top:6px;padding-left:14px;font-size:12px;color:var(–muted2);}
+.geo-steps li{margin-bottom:2px;}
+
 .sec-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(–muted);
 text-transform:uppercase;margin:18px 0 8px;}
 
@@ -42,11 +54,18 @@ text-transform:uppercase;margin:18px 0 8px;}
 .loc-lbl{font-size:11px;color:var(–muted2);width:38px;flex-shrink:0;}
 .loc-input{
 flex:1;background:var(–card2);border:1px solid var(–border);border-radius:10px;
-color:var(–text);font-size:13px;font-family:‘Noto Sans TC’,sans-serif;
+color:#ffffff !important;font-size:13px;font-family:‘Noto Sans TC’,sans-serif;
 padding:10px 11px;outline:none;transition:border-color .2s;min-width:0;
+-webkit-text-fill-color:#ffffff !important;
+caret-color:#ffffff;
 }
 .loc-input:focus{border-color:var(–orange);}
-.loc-input::placeholder{color:var(–muted);}
+.loc-input::placeholder{color:var(–muted);-webkit-text-fill-color:var(–muted);}
+.loc-input:-webkit-autofill,
+.loc-input:-webkit-autofill:focus{
+-webkit-box-shadow:0 0 0 100px var(–card2) inset !important;
+-webkit-text-fill-color:#ffffff !important;
+}
 .loc-input.hi{border-color:rgba(0,200,83,.5);background:rgba(0,200,83,.04);}
 .gps-btn{
 background:var(–card2);border:1px solid var(–border);border-radius:10px;
@@ -69,10 +88,18 @@ border:1px solid var(–border);border-radius:6px;padding:2px 8px;}
 .param-lbl{font-size:11px;color:var(–muted2);}
 .param-input{
 background:var(–card2);border:1px solid var(–border);border-radius:10px;
-color:var(–text);font-size:16px;font-family:‘Noto Sans TC’,sans-serif;
+color:#ffffff !important;font-size:16px;font-family:‘Noto Sans TC’,sans-serif;
 padding:10px 12px;outline:none;width:100%;transition:border-color .2s;
+-webkit-text-fill-color:#ffffff !important;
+caret-color:#ffffff;
 }
 .param-input:focus{border-color:var(–orange);}
+.param-input::placeholder{color:var(–muted);-webkit-text-fill-color:var(–muted);}
+.param-input:-webkit-autofill,
+.param-input:-webkit-autofill:focus{
+-webkit-box-shadow:0 0 0 100px var(–card2) inset !important;
+-webkit-text-fill-color:#ffffff !important;
+}
 .param-input.hi{border-color:rgba(0,200,83,.5);background:rgba(0,200,83,.04);}
 
 .speed-row{display:flex;gap:6px;margin-top:6px;}
@@ -151,6 +178,22 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
   <div class="auto-banner-text">
     <b>捷徑自動帶入成功</b>
     已從訂單截圖讀取地址與金額
+  </div>
+</div>
+
+<!-- 定位權限提示橫幅 -->
+
+<div class="geo-banner" id="geoBanner">
+  <div style="font-size:22px;margin-top:2px">📍</div>
+  <div class="geo-banner-text">
+    <b>需要開啟定位權限</b>
+    請依以下步驟允許 Safari 存取位置：
+    <ol class="geo-steps">
+      <li>開啟 iPhone「設定」</li>
+      <li>隱私權與安全性 → 定位服務</li>
+      <li>找到「Safari 網站」→ 改為「使用 App 期間」</li>
+      <li>回到此頁面重新點擊定位按鈕</li>
+    </ol>
   </div>
 </div>
 
@@ -267,21 +310,16 @@ let threshold = 200;
 let deadOn = true;
 let myCoords = null;
 
-/* ── 讀取 URL 參數（捷徑傳入） ─────────
-   格式：?pick=起點地址&drop=終點地址&fee=金額
-   ─────────────────────────────────────── */
+/* ── 讀取 URL 參數（捷徑傳入） ───────── */
 (function loadParams(){
   const p = new URLSearchParams(location.search);
   let hasAuto = false;
-
   const pick = p.get('pick');
   const drop = p.get('drop');
   const fee  = p.get('fee');
-
   if(pick){ document.getElementById('pickLoc').value = decodeURIComponent(pick); document.getElementById('pickLoc').classList.add('hi'); hasAuto=true; }
-  if(drop) { document.getElementById('dropLoc').value = decodeURIComponent(drop);  document.getElementById('dropLoc').classList.add('hi');  hasAuto=true; }
-  if(fee)  { document.getElementById('fee').value = decodeURIComponent(fee);       document.getElementById('fee').classList.add('hi');       hasAuto=true; }
-
+  if(drop){ document.getElementById('dropLoc').value = decodeURIComponent(drop); document.getElementById('dropLoc').classList.add('hi'); hasAuto=true; }
+  if(fee) { document.getElementById('fee').value = decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
   if(hasAuto) document.getElementById('autoBanner').classList.add('show');
 })();
 
@@ -312,23 +350,67 @@ function toggleDead(){
   document.getElementById('deadTog').classList.toggle('on', deadOn);
 }
 
-/* ── GPS ──────────────────────────────── */
-function getGPS(){
+/* ── GPS（修正定位權限處理） ──────────── */
+async function getGPS(){
   const btn = document.getElementById('gpsBtn');
-  btn.classList.add('spin'); btn.textContent='⏳';
-  if(!navigator.geolocation){ alert('不支援定位'); reset(); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    btn.classList.remove('spin'); btn.textContent='✅';
-    fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${myCoords.lat},${myCoords.lng}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`)
-      .then(r=>r.json()).then(d=>{
-        const addr = d.results?.[0]?.formatted_address || `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
-        document.getElementById('myLoc').value = addr;
-      }).catch(()=>{
-        document.getElementById('myLoc').value = `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
-      });
-  }, err=>{ btn.classList.remove('spin'); btn.textContent='📍'; alert('定位失敗：'+err.message); },
-  { timeout:10000, enableHighAccuracy:true });
+  const banner = document.getElementById('geoBanner');
+  banner.classList.remove('show');
+
+  if(!navigator.geolocation){
+    alert('您的瀏覽器不支援定位功能');
+    return;
+  }
+
+  // 先用 Permissions API 檢查目前狀態（iOS Safari 支援）
+  if(navigator.permissions){
+    try{
+      const status = await navigator.permissions.query({name:'geolocation'});
+      if(status.state === 'denied'){
+        // 已被拒，直接顯示教學，不再呼叫 getCurrentPosition
+        banner.classList.add('show');
+        banner.scrollIntoView({behavior:'smooth', block:'nearest'});
+        return;
+      }
+    } catch(e){ /* 部分瀏覽器不支援，繼續執行 */ }
+  }
+
+  btn.classList.add('spin');
+  btn.textContent = '⏳';
+
+  navigator.geolocation.getCurrentPosition(
+    // 成功
+    pos => {
+      myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      btn.classList.remove('spin');
+      btn.textContent = '✅';
+      banner.classList.remove('show');
+
+      fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${myCoords.lat},${myCoords.lng}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`)
+        .then(r=>r.json()).then(d=>{
+          const addr = d.results?.[0]?.formatted_address || `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
+          document.getElementById('myLoc').value = addr;
+        }).catch(()=>{
+          document.getElementById('myLoc').value = `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
+        });
+    },
+    // 失敗
+    err => {
+      btn.classList.remove('spin');
+      btn.textContent = '📍';
+      if(err.code === 1){
+        // 權限被拒 → 顯示教學橫幅
+        banner.classList.add('show');
+        banner.scrollIntoView({behavior:'smooth', block:'nearest'});
+      } else if(err.code === 2){
+        alert('⚠️ 無法取得位置，請確認 GPS 已開啟');
+      } else if(err.code === 3){
+        alert('⚠️ 定位逾時，請稍後再試');
+      } else {
+        alert('⚠️ 定位失敗：' + err.message);
+      }
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
 }
 
 /* ── Google Geocoding ─────────────────── */
@@ -349,10 +431,9 @@ async function roadKm(a, b){
     const res  = await fetch(url);
     const data = await res.json();
     if(data.status === 'OK'){
-      // 加總所有路段距離
       let meters = 0;
       data.routes[0].legs.forEach(leg => meters += leg.distance.value);
-      return meters / 1000; // 公尺 → 公里
+      return meters / 1000;
     }
   } catch(e){}
   // fallback：Haversine × 1.35
@@ -380,7 +461,6 @@ async function calculate(){
     if(!dropAddr) throw new Error('請輸入終點地址');
     if(deadOn && !myAddr && !myCoords) throw new Error('請定位或輸入「我的位置」（空跑計算需要）');
 
-    // 地理編碼（平行處理加速）
     const [pickC, dropC] = await Promise.all([geocode(pickAddr), geocode(dropAddr)]);
 
     let deadKm = 0;
@@ -415,9 +495,9 @@ function showResult({fee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph}){
 
   const ratio = rph/threshold;
   const v = document.getElementById('verdict');
-  if(ratio>=1){      v.textContent='✅ 建議接單'; v.className='verdict good'; }
+  if(ratio>=1){        v.textContent='✅ 建議接單'; v.className='verdict good'; }
   else if(ratio>=.75){ v.textContent='⚠️ 勉強可接'; v.className='verdict mid'; }
-  else{              v.textContent='❌ 不建議接'; v.className='verdict bad'; }
+  else{                v.textContent='❌ 不建議接'; v.className='verdict bad'; }
 
   document.getElementById('rRph').textContent  = Math.round(rph);
   document.getElementById('rTime').textContent = Math.round(totalMin);
