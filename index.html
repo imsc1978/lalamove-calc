@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v10</title>
+<title>接單效益計算 v12</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -17,154 +16,156 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
 .app{max-width:480px;margin:0 auto;padding:20px 16px 60px;}
 
 .header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
-.logo{font-family:‘Barlow Condensed’,sans-serif;font-weight:900;font-size:26px;color:var(–orange);}
-.logo span{color:var(–text);}
+.logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;color:var(--orange);}
+.logo span{color:var(--text);}
 
 .auto-banner{
-background:rgba(0,200,83,.08);border:1px solid rgba(0,200,83,.25);
-border-radius:12px;padding:12px 14px;margin-bottom:16px;
-display:none;align-items:center;gap:10px;
+  background:rgba(0,200,83,.08);border:1px solid rgba(0,200,83,.25);
+  border-radius:12px;padding:12px 14px;margin-bottom:16px;
+  display:none;align-items:center;gap:10px;
 }
 .auto-banner.show{display:flex;}
-.auto-banner-text{font-size:13px;color:var(–green);}
+.auto-banner-text{font-size:13px;color:var(--green);}
 .auto-banner-text b{display:block;font-size:14px;margin-bottom:2px;}
 
 /* 定位提示橫幅 */
 .geo-banner{
-background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.3);
-border-radius:12px;padding:12px 14px;margin-bottom:12px;
-display:none;align-items:flex-start;gap:10px;
+  background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.3);
+  border-radius:12px;padding:12px 14px;margin-bottom:12px;
+  display:none;align-items:flex-start;gap:10px;
 }
 .geo-banner.show{display:flex;}
-.geo-banner-text{font-size:13px;color:var(–orange);line-height:1.5;}
+.geo-banner-text{font-size:13px;color:var(--orange);line-height:1.5;}
 .geo-banner-text b{display:block;font-size:14px;margin-bottom:4px;color:#fff;}
-.geo-steps{margin-top:6px;padding-left:14px;font-size:12px;color:var(–muted2);}
+.geo-steps{margin-top:6px;padding-left:14px;font-size:12px;color:var(--muted2);}
 .geo-steps li{margin-bottom:2px;}
 
-.sec-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(–muted);
-text-transform:uppercase;margin:18px 0 8px;}
+.sec-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;margin:18px 0 8px;}
 
-.card{background:var(–card);border:1px solid var(–border);border-radius:16px;padding:16px;margin-bottom:12px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;}
 
 /* 地址 */
 .loc-row{display:flex;align-items:center;gap:10px;padding:10px 0;}
-.loc-row+.loc-row{border-top:1px solid var(–border);}
+.loc-row+.loc-row{border-top:1px solid var(--border);}
 .loc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.dot-me{background:#4da3ff;}.dot-pick{background:var(–orange);}.dot-drop{background:var(–green);}
-.loc-lbl{font-size:11px;color:var(–muted2);width:38px;flex-shrink:0;}
+.dot-me{background:#4da3ff;}.dot-pick{background:var(--orange);}.dot-drop{background:var(--green);}
+.loc-lbl{font-size:11px;color:var(--muted2);width:38px;flex-shrink:0;}
 .loc-input{
-flex:1;background:#1a1a1a;border:1px solid var(–border);border-radius:10px;
-color:#ffffff !important;font-size:13px;font-family:‘Noto Sans TC’,sans-serif;
-padding:10px 11px;outline:none;transition:border-color .2s;min-width:0;
--webkit-text-fill-color:#ffffff !important;
-caret-color:#ffffff;
-appearance:none;-webkit-appearance:none;
+  flex:1;background:#1a1a1a;border:1px solid var(--border);border-radius:10px;
+  color:#ffffff !important;font-size:13px;font-family:'Noto Sans TC',sans-serif;
+  padding:10px 11px;outline:none;transition:border-color .2s;min-width:0;
+  -webkit-text-fill-color:#ffffff !important;
+  caret-color:#ffffff;
+  appearance:none;-webkit-appearance:none;
 }
-.loc-input:focus{border-color:var(–orange);background:#1a1a1a;}
+.loc-input:focus{border-color:var(--orange);background:#1a1a1a;}
 .loc-input::placeholder{color:#555;-webkit-text-fill-color:#555;}
 .loc-input:-webkit-autofill,
 .loc-input:-webkit-autofill:focus{
--webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
--webkit-text-fill-color:#ffffff !important;
-background:#1a1a1a !important;
+  -webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
+  -webkit-text-fill-color:#ffffff !important;
+  background:#1a1a1a !important;
 }
 .loc-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22 !important;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
 .gps-btn{
-background:var(–card2);border:1px solid var(–border);border-radius:10px;
-color:var(–muted2);font-size:18px;width:40px;height:40px;min-width:40px;
-display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;
+  background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  color:var(--muted2);font-size:18px;width:40px;height:40px;min-width:40px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;
 }
-.gps-btn:active{background:var(–orange);color:#fff;border-color:var(–orange);}
+.gps-btn:active{background:var(--orange);color:#fff;border-color:var(--orange);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .gps-btn.spin{animation:pulse .8s infinite;}
 
 .conn{display:flex;align-items:center;gap:8px;padding:3px 0 3px 19px;}
-.conn-line{width:2px;height:18px;background:var(–border);margin-left:3px;}
-.dist-tag{font-size:11px;color:var(–muted2);background:var(–card2);
-border:1px solid var(–border);border-radius:6px;padding:2px 8px;}
-.dist-tag.ok{color:var(–orange);border-color:rgba(255,107,0,.35);}
+.conn-line{width:2px;height:18px;background:var(--border);margin-left:3px;}
+.dist-tag{font-size:11px;color:var(--muted2);background:var(--card2);
+  border:1px solid var(--border);border-radius:6px;padding:2px 8px;}
+.dist-tag.ok{color:var(--orange);border-color:rgba(255,107,0,.35);}
 
 /* 參數 */
 .param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .param-item{display:flex;flex-direction:column;gap:5px;}
-.param-lbl{font-size:11px;color:var(–muted2);}
+.param-lbl{font-size:11px;color:var(--muted2);}
 .param-input{
-background:#1a1a1a;border:1px solid var(–border);border-radius:10px;
-color:#ffffff !important;font-size:16px;font-family:‘Noto Sans TC’,sans-serif;
-padding:10px 12px;outline:none;width:100%;transition:border-color .2s;
--webkit-text-fill-color:#ffffff !important;
-caret-color:#ffffff;
-appearance:none;-webkit-appearance:none;
+  background:#1a1a1a;border:1px solid var(--border);border-radius:10px;
+  color:#ffffff !important;font-size:16px;font-family:'Noto Sans TC',sans-serif;
+  padding:10px 12px;outline:none;width:100%;transition:border-color .2s;
+  -webkit-text-fill-color:#ffffff !important;
+  caret-color:#ffffff;
+  appearance:none;-webkit-appearance:none;
 }
-.param-input:focus{border-color:var(–orange);background:#1a1a1a;}
+.param-input:focus{border-color:var(--orange);background:#1a1a1a;}
 .param-input::placeholder{color:#555555;-webkit-text-fill-color:#555555;}
 .param-input:-webkit-autofill,
 .param-input:-webkit-autofill:focus{
--webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
--webkit-text-fill-color:#ffffff !important;
-background:#1a1a1a !important;
+  -webkit-box-shadow:0 0 0 100px #1a1a1a inset !important;
+  -webkit-text-fill-color:#ffffff !important;
+  background:#1a1a1a !important;
 }
 .param-input.hi{border-color:rgba(0,200,83,.5);background:#1e2e22 !important;-webkit-text-fill-color:#ffffff !important;color:#ffffff !important;}
 
 .speed-row{display:flex;gap:6px;margin-top:6px;}
 .speed-btn{
-flex:1;padding:8px 4px;border:1px solid var(–border);border-radius:8px;
-background:var(–card2);color:var(–muted2);font-size:12px;cursor:pointer;
-text-align:center;font-family:‘Noto Sans TC’,sans-serif;transition:all .15s;
+  flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;
+  background:var(--card2);color:var(--muted2);font-size:12px;cursor:pointer;
+  text-align:center;font-family:'Noto Sans TC',sans-serif;transition:all .15s;
 }
-.speed-btn.active{background:rgba(255,107,0,.15);border-color:var(–orange);color:var(–orange);font-weight:700;}
+.speed-btn.active{background:rgba(255,107,0,.15);border-color:var(--orange);color:var(--orange);font-weight:700;}
 
 .toggle-row{display:flex;align-items:center;justify-content:space-between;
-padding:10px 0;border-top:1px solid var(–border);margin-top:10px;}
-.toggle-lbl{font-size:13px;color:var(–muted2);}
+  padding:10px 0;border-top:1px solid var(--border);margin-top:10px;}
+.toggle-lbl{font-size:13px;color:var(--muted2);}
 .toggle{width:44px;height:26px;background:#333;border-radius:13px;
-position:relative;cursor:pointer;transition:background .2s;
--webkit-appearance:none;appearance:none;flex-shrink:0;}
+  position:relative;cursor:pointer;transition:background .2s;
+  -webkit-appearance:none;appearance:none;flex-shrink:0;}
 .toggle.on{background:#FF6B00 !important;}
 .toggle-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;
-background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4);}
 .toggle.on .toggle-knob{transform:translateX(18px);}
 
 /* 目標時薪 */
 .th-row{display:flex;gap:6px;margin-bottom:10px;}
 .th-btn{
-flex:1;padding:8px 4px;border:1px solid var(–border);border-radius:8px;
-background:var(–card2);color:var(–muted2);font-size:12px;cursor:pointer;
-text-align:center;font-family:‘Noto Sans TC’,sans-serif;transition:all .15s;
+  flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;
+  background:var(--card2);color:var(--muted2);font-size:12px;cursor:pointer;
+  text-align:center;font-family:'Noto Sans TC',sans-serif;transition:all .15s;
 }
-.th-btn.active{background:rgba(255,107,0,.12);border-color:var(–orange);color:var(–orange);font-weight:700;}
+.th-btn.active{background:rgba(255,107,0,.12);border-color:var(--orange);color:var(--orange);font-weight:700;}
 
 .calc-btn{
-width:100%;padding:16px;background:var(–orange);border:none;border-radius:14px;
-color:#fff;font-size:16px;font-weight:700;font-family:‘Noto Sans TC’,sans-serif;
-cursor:pointer;margin-top:4px;transition:all .2s;
+  width:100%;padding:16px;background:var(--orange);border:none;border-radius:14px;
+  color:#fff;font-size:16px;font-weight:700;font-family:'Noto Sans TC',sans-serif;
+  cursor:pointer;margin-top:4px;transition:all .2s;
 }
 .calc-btn:active{opacity:.85;transform:scale(.98);}
 
 /* 結果 */
-.result-card{background:var(–card);border:1px solid var(–border);border-radius:20px;
-padding:20px;margin-bottom:12px;display:none;}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:20px;margin-bottom:12px;display:none;}
 .result-card.show{display:block;}
 
 .verdict{text-align:center;padding:16px;border-radius:14px;margin-bottom:16px;
-font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;letter-spacing:1px;}
-.verdict.good{background:rgba(0,200,83,.1);color:var(–green);border:1px solid rgba(0,200,83,.25);}
-.verdict.mid{background:rgba(255,214,0,.1);color:var(–yellow);border:1px solid rgba(255,214,0,.25);}
-.verdict.bad{background:rgba(255,59,59,.1);color:var(–red);border:1px solid rgba(255,59,59,.25);}
+  font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:1px;}
+.verdict.good{background:rgba(0,200,83,.1);color:var(--green);border:1px solid rgba(0,200,83,.25);}
+.verdict.mid{background:rgba(255,214,0,.1);color:var(--yellow);border:1px solid rgba(255,214,0,.25);}
+.verdict.bad{background:rgba(255,59,59,.1);color:var(--red);border:1px solid rgba(255,59,59,.25);}
 
 .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.r-item{background:var(–card2);border:1px solid var(–border);border-radius:12px;padding:12px;}
-.r-lbl{font-size:11px;color:var(–muted2);margin-bottom:4px;}
-.r-val{font-family:‘Barlow Condensed’,sans-serif;font-size:26px;font-weight:700;}
-.r-unit{font-size:12px;color:var(–muted2);}
+.r-item{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.r-lbl{font-size:11px;color:var(--muted2);margin-bottom:4px;}
+.r-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;}
+.r-unit{font-size:12px;color:var(--muted2);}
 
-.breakdown{border-top:1px solid var(–border);padding-top:12px;display:flex;flex-direction:column;gap:8px;}
+.breakdown{border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;}
 .bk{display:flex;justify-content:space-between;font-size:13px;}
-.bk-k{color:var(–muted2);}
-.bk-v{color:var(–text);font-weight:500;}
-.bk.total .bk-k{color:var(–text);font-weight:700;}
-.bk.total .bk-v{color:var(–orange);font-weight:700;font-size:15px;}
+.bk-k{color:var(--muted2);}
+.bk-v{color:var(--text);font-weight:500;}
+.bk.total .bk-k{color:var(--text);font-weight:700;}
+.bk.total .bk-v{color:var(--orange);font-weight:700;font-size:15px;}
 </style>
+
+
 
 </head>
 <body>
@@ -175,7 +176,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 </div>
 
 <!-- 捷徑自動帶入橫幅 -->
-
 <div class="auto-banner" id="autoBanner">
   <div style="font-size:22px">⚡</div>
   <div class="auto-banner-text">
@@ -185,7 +185,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 </div>
 
 <!-- 定位權限提示橫幅 -->
-
 <div class="geo-banner" id="geoBanner">
   <div style="font-size:22px;margin-top:2px">📍</div>
   <div class="geo-banner-text">
@@ -201,7 +200,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 </div>
 
 <!-- 位置 -->
-
 <div class="sec-label">位置</div>
 <div class="card">
   <div class="loc-row">
@@ -225,17 +223,17 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 </div>
 
 <!-- 訂單 -->
-
 <div class="sec-label">訂單</div>
 <div class="card">
   <div class="param-grid">
     <div class="param-item">
       <div class="param-lbl">訂單金額 (元)</div>
-      <input class="param-input" id="fee" type="text" inputmode="decimal" placeholder="120">
+      <input class="param-input" id="fee" type="text" inputmode="decimal" placeholder="120" oninput="updateFeeInfo()">
+      <div id="feeInfo" style="font-size:12px;color:#888;margin-top:4px;min-height:16px;"></div>
     </div>
     <div class="param-item">
       <div class="param-lbl">等待時間 (分鐘)</div>
-      <input class="param-input" id="waitMin" type="text" inputmode="decimal" placeholder="5" value="5">
+      <input class="param-input" id="waitMin" type="text" inputmode="decimal" placeholder="10" value="10">
     </div>
   </div>
   <div style="margin-top:12px">
@@ -254,7 +252,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 </div>
 
 <!-- 目標時薪 -->
-
 <div class="sec-label">目標時薪</div>
 <div class="card">
   <div class="th-row">
@@ -270,7 +267,6 @@ font-family:‘Barlow Condensed’,sans-serif;font-size:30px;font-weight:900;let
 <button class="calc-btn" id="calcBtn" onclick="calculate()">▶ 計算接單效益</button>
 
 <!-- 結果 -->
-
 <div class="result-card" id="resultCard">
   <div class="verdict" id="verdict"></div>
   <div class="result-grid">
@@ -324,9 +320,20 @@ let myCoords = null;
   if(drop){ document.getElementById('dropLoc').value = decodeURIComponent(drop); document.getElementById('dropLoc').classList.add('hi'); hasAuto=true; }
   if(fee) { document.getElementById('fee').value = decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
   if(hasAuto) document.getElementById('autoBanner').classList.add('show');
+  updateFeeInfo();
   // 初始化 toggle 顏色
   document.getElementById('deadTog').style.background = '#FF6B00';
 })();
+
+/* ── 實收金額即時顯示 ─────────────────── */
+function updateFeeInfo(){
+  const raw = parseFloat(document.getElementById('fee').value);
+  const info = document.getElementById('feeInfo');
+  if(!raw || isNaN(raw)){ info.textContent = ''; return; }
+  const actual = Math.ceil(raw * 0.75);
+  const cut    = raw - actual;
+  info.textContent = `實收 $${actual}　平台抽 $${cut}`;
+}
 
 /* ── 速度 ─────────────────────────────── */
 function setSpeed(v){
@@ -492,9 +499,10 @@ async function calculate(){
     const totalKm  = deadOn ? deadKm+delivKm : delivKm;
     const driveMin = (totalKm/speedKmh)*60;
     const totalMin = driveMin+waitMin;
-    const rph      = fee/(totalMin/60);
+    const actualFee = Math.ceil(fee * 0.75); // 平台抽25%，無條件進位
+    const rph      = actualFee/(totalMin/60);
 
-    showResult({fee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph});
+    showResult({fee, actualFee, deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph});
 
   } catch(e){
     alert('⚠️ '+e.message);
@@ -503,7 +511,7 @@ async function calculate(){
   }
 }
 
-function showResult({fee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph}){
+function showResult({fee, actualFee, deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph}){
   const card = document.getElementById('resultCard');
   card.classList.add('show');
 
@@ -516,13 +524,13 @@ function showResult({fee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph}){
   document.getElementById('rRph').textContent  = Math.round(rph);
   document.getElementById('rTime').textContent = Math.round(totalMin);
   document.getElementById('rDist').textContent = totalKm.toFixed(1);
-  document.getElementById('rFee').textContent  = fee;
+  document.getElementById('rFee').textContent  = actualFee + ' (原' + fee + ')';
 
   document.getElementById('bDead').textContent  = deadOn ? deadKm.toFixed(1)+' km' : '未計入';
   document.getElementById('bDeliv').textContent = delivKm.toFixed(1)+' km';
   document.getElementById('bDrive').textContent = Math.round(driveMin)+' 分鐘';
   document.getElementById('bWait').textContent  = waitMin+' 分鐘';
-  document.getElementById('bTotal').textContent = '$'+Math.round(rph)+' / 小時';
+  document.getElementById('bTotal').textContent = '$'+Math.round(rph)+' / 小時（實收 $'+actualFee+'）';
 
   card.scrollIntoView({behavior:'smooth',block:'start'});
 }
