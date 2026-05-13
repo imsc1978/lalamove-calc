@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v17</title>
+<title>接單效益計算 v18</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -397,29 +397,32 @@ function saveBlacklist(){
 }
 
 function renderBlacklist(){
-  const el = document.getElementById('blList');
+  var el = document.getElementById('blList');
   if(blacklist.length === 0){
     el.innerHTML = '<div class="bl-empty">尚無黑名單地址</div>';
     return;
   }
-  el.innerHTML = blacklist.map((item, i) => `
-    <div class="bl-item" id="bl-item-${i}">
-      <div style="flex:1">
-        <div class="bl-addr">${item.addr}</div>
-        ${item.note ? `<div class="bl-note">📝 ${item.note}</div>` : ''}
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="bl-del" style="background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.3);color:var(--orange)" onclick="editBlacklist(${i})">編輯</button>
-        <button class="bl-del" onclick="delBlacklist(${i})">刪除</button>
-      </div>
-    </div>
-  `).join('');
+  var html = '';
+  for(var i=0; i<blacklist.length; i++){
+    var item = blacklist[i];
+    html += '<div class="bl-item" id="bl-item-' + i + '">';
+    html += '<div style="flex:1">';
+    html += '<div class="bl-addr">' + item.addr + '</div>';
+    if(item.note) html += '<div class="bl-note">📝 ' + item.note + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+    html += '<button class="bl-del" style="background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.3);color:var(--orange)" onclick="editBlacklist(' + i + ')">編輯</button>';
+    html += '<button class="bl-del" onclick="delBlacklist(' + i + ')">刪除</button>';
+    html += '</div></div>';
+  }
+  el.innerHTML = html;
+}
 }
 
 function addBlacklist(prefillAddr){
-  const addrEl = document.getElementById('blAddrInput');
-  const noteEl = document.getElementById('blNoteInput');
-  const btnEl  = document.getElementById('blAddBtn');
+  var addrEl = document.getElementById('blAddrInput');
+  var noteEl = document.getElementById('blNoteInput');
+  var btnEl  = document.getElementById('blAddBtn');
   if(prefillAddr){
     addrEl.value = prefillAddr;
     noteEl.value = '';
@@ -427,20 +430,22 @@ function addBlacklist(prefillAddr){
     addrEl.focus();
     return;
   }
-  const addr = addrEl.value.trim();
-  const note = noteEl.value.trim();
+  var addr = addrEl.value.trim();
+  var note = noteEl.value.trim();
   if(!addr){ alert('請輸入地址'); return; }
-  const normalized = addr.replace(/臺/g,'台');
-  const editIdxStr = btnEl.getAttribute('data-edit-idx');
-  const editIdx = editIdxStr !== null ? parseInt(editIdxStr) : -1;
+  var normalized = addr.replace(/臺/g,'台');
+  var editIdxStr = btnEl.getAttribute('data-edit-idx');
+  var editIdx = editIdxStr !== null ? parseInt(editIdxStr) : -1;
 
   if(editIdx >= 0){
-    blacklist[editIdx] = { addr: normalized, note };
+    blacklist[editIdx] = { addr: normalized, note: note };
     btnEl.textContent = '＋ 加入黑名單';
     btnEl.removeAttribute('data-edit-idx');
   } else {
-    if(blacklist.find(function(b){ return b.addr === normalized; })){ alert('此地址已在黑名單中'); return; }
-    blacklist.push({ addr: normalized, note });
+    for(var i=0; i<blacklist.length; i++){
+      if(blacklist[i].addr === normalized){ alert('此地址已在黑名單中'); return; }
+    }
+    blacklist.push({ addr: normalized, note: note });
   }
   saveBlacklist();
   renderBlacklist();
@@ -466,14 +471,15 @@ function delBlacklist(i){
 }
 
 function checkBlacklist(pick, drop){
-  const normalize = s => s.replace(/臺/g,'台').replace(/\s/g,'');
-  const hits = [];
-  blacklist.forEach(b => {
-    const bn = normalize(b.addr);
-    if(normalize(pick).includes(bn) || normalize(drop).includes(bn)){
-      hits.push(b);
+  function normalize(s){ return s.replace(/臺/g,'台').replace(/\s/g,''); }
+  var hits = [];
+  var bn, pickN = normalize(pick), dropN = normalize(drop);
+  for(var i=0; i<blacklist.length; i++){
+    bn = normalize(blacklist[i].addr);
+    if(pickN.includes(bn) || dropN.includes(bn)){
+      hits.push(blacklist[i]);
     }
-  });
+  }
   return hits;
 }
 
@@ -489,12 +495,12 @@ function forceCalc(){
 
 
 function updateFeeInfo(){
-  const raw = parseFloat(document.getElementById('fee').value);
-  const info = document.getElementById('feeInfo');
+  var raw = parseFloat(document.getElementById('fee').value);
+  var info = document.getElementById('feeInfo');
   if(!raw || isNaN(raw)){ info.textContent = ''; return; }
-  const actual = Math.ceil(raw * 0.75);
-  const cut    = raw - actual;
-  info.textContent = `實收 $${actual}　平台抽 $${cut}`;
+  var actual = Math.ceil(raw * 0.75);
+  var cut    = raw - actual;
+  info.textContent = '實收 $' + actual + '　平台抽 $' + cut;
 }
 
 /* ── 速度 ─────────────────────────────── */
@@ -631,13 +637,15 @@ async function roadKm(a, b){
 
 /* ── 計算 ─────────────────────────────── */
 async function calculate(){
-  const pickAddr = document.getElementById('pickLoc').value.trim();
-  const dropAddr = document.getElementById('dropLoc').value.trim();
+  var pickAddr = document.getElementById('pickLoc').value.trim();
+  var dropAddr = document.getElementById('dropLoc').value.trim();
 
-  // 先做黑名單檢查
-  const hits = checkBlacklist(pickAddr, dropAddr);
+  var hits = checkBlacklist(pickAddr, dropAddr);
   if(hits.length > 0){
-    const lines = hits.map(h => `• ${h.addr}${h.note ? `（${h.note}）` : ''}`).join('\n');
+    var lines = '';
+    for(var i=0; i<hits.length; i++){
+      lines += '• ' + hits[i].addr + (hits[i].note ? '（' + hits[i].note + '）' : '') + '\n';
+    }
     document.getElementById('blWarnBody').textContent = '以下地址在黑名單中：\n' + lines;
     document.getElementById('blWarn').classList.add('show');
     document.getElementById('blWarn').scrollIntoView({behavior:'smooth', block:'nearest'});
