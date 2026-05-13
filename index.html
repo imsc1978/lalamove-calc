@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v16</title>
+<title>接單效益計算 v17</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -241,12 +241,14 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
     <div class="loc-dot dot-pick"></div>
     <div class="loc-lbl">起點</div>
     <input class="loc-input" id="pickLoc" placeholder="取貨地址（捷徑自動帶入）">
+    <div class="gps-btn" title="加入黑名單" onclick="addBlacklist(document.getElementById('pickLoc').value.trim())" style="font-size:14px">🚫</div>
   </div>
   <div class="conn"><div class="conn-line"></div><div class="dist-tag" id="d2tag">送達 --</div></div>
   <div class="loc-row">
     <div class="loc-dot dot-drop"></div>
     <div class="loc-lbl">終點</div>
     <input class="loc-input" id="dropLoc" placeholder="送達地址（捷徑自動帶入）">
+    <div class="gps-btn" title="加入黑名單" onclick="addBlacklist(document.getElementById('dropLoc').value.trim())" style="font-size:14px">🚫</div>
   </div>
 </div>
 
@@ -414,23 +416,30 @@ function renderBlacklist(){
   `).join('');
 }
 
-function addBlacklist(){
+function addBlacklist(prefillAddr){
   const addrEl = document.getElementById('blAddrInput');
   const noteEl = document.getElementById('blNoteInput');
   const btnEl  = document.getElementById('blAddBtn');
+  if(prefillAddr){
+    addrEl.value = prefillAddr;
+    noteEl.value = '';
+    addrEl.scrollIntoView({behavior:'smooth', block:'center'});
+    addrEl.focus();
+    return;
+  }
   const addr = addrEl.value.trim();
   const note = noteEl.value.trim();
   if(!addr){ alert('請輸入地址'); return; }
   const normalized = addr.replace(/臺/g,'台');
-  const editIdx = parseInt(btnEl.dataset.editIdx ?? '-1');
+  const editIdxStr = btnEl.getAttribute('data-edit-idx');
+  const editIdx = editIdxStr !== null ? parseInt(editIdxStr) : -1;
 
   if(editIdx >= 0){
-    // 更新模式
     blacklist[editIdx] = { addr: normalized, note };
     btnEl.textContent = '＋ 加入黑名單';
-    delete btnEl.dataset.editIdx;
+    btnEl.removeAttribute('data-edit-idx');
   } else {
-    if(blacklist.find(b => b.addr === normalized)){ alert('此地址已在黑名單中'); return; }
+    if(blacklist.find(function(b){ return b.addr === normalized; })){ alert('此地址已在黑名單中'); return; }
     blacklist.push({ addr: normalized, note });
   }
   saveBlacklist();
@@ -445,7 +454,7 @@ function editBlacklist(i){
   document.getElementById('blNoteInput').value = item.note || '';
   const btn = document.getElementById('blAddBtn');
   btn.textContent = '✏️ 更新黑名單';
-  btn.dataset.editIdx = i;
+  btn.setAttribute('data-edit-idx', i);
   document.getElementById('blAddrInput').scrollIntoView({behavior:'smooth', block:'center'});
   document.getElementById('blAddrInput').focus();
 }
