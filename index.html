@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v14</title>
+<title>接單效益計算 v16</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -140,7 +140,35 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
 }
 .calc-btn:active{opacity:.85;transform:scale(.98);}
 
-/* 結果 */
+/* 黑名單 */
+.bl-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--border);}
+.bl-item:first-child{border-top:none;}
+.bl-addr{flex:1;font-size:13px;color:var(--text);line-height:1.4;}
+.bl-note{font-size:11px;color:var(--muted2);margin-top:2px;}
+.bl-del{background:rgba(255,59,59,.15);border:1px solid rgba(255,59,59,.3);border-radius:8px;
+  color:var(--red);font-size:12px;padding:4px 10px;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.bl-empty{font-size:13px;color:var(--muted);text-align:center;padding:12px 0;}
+.bl-add-row{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.bl-input{background:#1a1a1a;border:1px solid var(--border);border-radius:10px;
+  color:#fff;font-size:13px;font-family:'Noto Sans TC',sans-serif;
+  padding:9px 11px;outline:none;width:100%;-webkit-text-fill-color:#fff;}
+.bl-input:focus{border-color:var(--orange);}
+.bl-input::placeholder{color:#555;-webkit-text-fill-color:#555;}
+.bl-add-btn{background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  color:var(--orange);font-size:13px;font-family:'Noto Sans TC',sans-serif;
+  padding:9px;cursor:pointer;width:100%;}
+
+/* 黑名單警示橫幅 */
+.bl-warn{background:rgba(255,59,59,.1);border:1px solid rgba(255,59,59,.4);
+  border-radius:12px;padding:14px;margin-bottom:12px;display:none;}
+.bl-warn.show{display:block;}
+.bl-warn-title{font-size:15px;font-weight:700;color:var(--red);margin-bottom:6px;}
+.bl-warn-body{font-size:13px;color:#ffaaaa;line-height:1.5;margin-bottom:12px;}
+.bl-warn-btns{display:flex;gap:8px;}
+.bl-warn-cancel{flex:1;padding:10px;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;color:var(--muted2);font-size:13px;font-family:'Noto Sans TC',sans-serif;cursor:pointer;}
+.bl-warn-go{flex:1;padding:10px;background:rgba(255,59,59,.2);border:1px solid rgba(255,59,59,.5);
+  border-radius:10px;color:var(--red);font-size:13px;font-family:'Noto Sans TC',sans-serif;cursor:pointer;}
 .result-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
   padding:20px;margin-bottom:12px;display:none;}
 .result-card.show{display:block;}
@@ -264,7 +292,28 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
     placeholder="自訂時薪目標" style="font-size:14px" oninput="customTh()">
 </div>
 
+<!-- 黑名單警示 -->
+<div class="bl-warn" id="blWarn">
+  <div class="bl-warn-title">⚠️ 黑名單地址警示</div>
+  <div class="bl-warn-body" id="blWarnBody"></div>
+  <div class="bl-warn-btns">
+    <button class="bl-warn-cancel" onclick="cancelCalc()">取消</button>
+    <button class="bl-warn-go" onclick="forceCalc()">仍要計算</button>
+  </div>
+</div>
+
 <button class="calc-btn" id="calcBtn" onclick="calculate()">▶ 計算接單效益</button>
+
+<!-- 黑名單管理 -->
+<div class="sec-label" style="margin-top:24px">🚫 拒接地址黑名單</div>
+<div class="card">
+  <div id="blList"><div class="bl-empty">尚無黑名單地址</div></div>
+  <div class="bl-add-row">
+    <input class="bl-input" id="blAddrInput" placeholder="輸入完整地址（如：台北市中山區中山北路二段92號）">
+    <input class="bl-input" id="blNoteInput" placeholder="備註原因（可留空）">
+    <button class="bl-add-btn" id="blAddBtn" onclick="addBlacklist()">＋ 加入黑名單</button>
+  </div>
+</div>
 
 <!-- 結果 -->
 <div class="result-card" id="resultCard">
@@ -316,16 +365,120 @@ let myCoords = null;
   const pick = p.get('pick');
   const drop = p.get('drop');
   const fee  = p.get('fee');
-  if(pick){ document.getElementById('pickLoc').value = decodeURIComponent(pick); document.getElementById('pickLoc').classList.add('hi'); hasAuto=true; }
-  if(drop){ document.getElementById('dropLoc').value = decodeURIComponent(drop); document.getElementById('dropLoc').classList.add('hi'); hasAuto=true; }
+  if(pick){ 
+    const pickClean = decodeURIComponent(pick).replace(/\s+/g,'');
+    document.getElementById('pickLoc').value = pickClean; 
+    document.getElementById('pickLoc').classList.add('hi'); 
+    hasAuto=true; 
+  }
+  if(drop){ 
+    const dropClean = decodeURIComponent(drop).replace(/\s+/g,'');
+    document.getElementById('dropLoc').value = dropClean; 
+    document.getElementById('dropLoc').classList.add('hi'); 
+    hasAuto=true; 
+  }
   if(fee) { document.getElementById('fee').value = decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
   if(hasAuto) document.getElementById('autoBanner').classList.add('show');
   updateFeeInfo();
   // 初始化 toggle 顏色
   document.getElementById('deadTog').style.background = '#FF6B00';
+  // 渲染黑名單
+  renderBlacklist();
 })();
 
-/* ── 實收金額即時顯示 ─────────────────── */
+/* ── 黑名單 ───────────────────────────── */
+let blacklist = JSON.parse(localStorage.getItem('lalamove_blacklist') || '[]');
+let pendingCalc = false;
+
+function saveBlacklist(){
+  localStorage.setItem('lalamove_blacklist', JSON.stringify(blacklist));
+}
+
+function renderBlacklist(){
+  const el = document.getElementById('blList');
+  if(blacklist.length === 0){
+    el.innerHTML = '<div class="bl-empty">尚無黑名單地址</div>';
+    return;
+  }
+  el.innerHTML = blacklist.map((item, i) => `
+    <div class="bl-item" id="bl-item-${i}">
+      <div style="flex:1">
+        <div class="bl-addr">${item.addr}</div>
+        ${item.note ? `<div class="bl-note">📝 ${item.note}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="bl-del" style="background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.3);color:var(--orange)" onclick="editBlacklist(${i})">編輯</button>
+        <button class="bl-del" onclick="delBlacklist(${i})">刪除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addBlacklist(){
+  const addrEl = document.getElementById('blAddrInput');
+  const noteEl = document.getElementById('blNoteInput');
+  const btnEl  = document.getElementById('blAddBtn');
+  const addr = addrEl.value.trim();
+  const note = noteEl.value.trim();
+  if(!addr){ alert('請輸入地址'); return; }
+  const normalized = addr.replace(/臺/g,'台');
+  const editIdx = parseInt(btnEl.dataset.editIdx ?? '-1');
+
+  if(editIdx >= 0){
+    // 更新模式
+    blacklist[editIdx] = { addr: normalized, note };
+    btnEl.textContent = '＋ 加入黑名單';
+    delete btnEl.dataset.editIdx;
+  } else {
+    if(blacklist.find(b => b.addr === normalized)){ alert('此地址已在黑名單中'); return; }
+    blacklist.push({ addr: normalized, note });
+  }
+  saveBlacklist();
+  renderBlacklist();
+  addrEl.value = '';
+  noteEl.value = '';
+}
+
+function editBlacklist(i){
+  const item = blacklist[i];
+  document.getElementById('blAddrInput').value = item.addr;
+  document.getElementById('blNoteInput').value = item.note || '';
+  const btn = document.getElementById('blAddBtn');
+  btn.textContent = '✏️ 更新黑名單';
+  btn.dataset.editIdx = i;
+  document.getElementById('blAddrInput').scrollIntoView({behavior:'smooth', block:'center'});
+  document.getElementById('blAddrInput').focus();
+}
+
+function delBlacklist(i){
+  blacklist.splice(i, 1);
+  saveBlacklist();
+  renderBlacklist();
+}
+
+function checkBlacklist(pick, drop){
+  const normalize = s => s.replace(/臺/g,'台').replace(/\s/g,'');
+  const hits = [];
+  blacklist.forEach(b => {
+    const bn = normalize(b.addr);
+    if(normalize(pick).includes(bn) || normalize(drop).includes(bn)){
+      hits.push(b);
+    }
+  });
+  return hits;
+}
+
+function cancelCalc(){
+  pendingCalc = false;
+  document.getElementById('blWarn').classList.remove('show');
+}
+
+function forceCalc(){
+  document.getElementById('blWarn').classList.remove('show');
+  doCalculate();
+}
+
+
 function updateFeeInfo(){
   const raw = parseFloat(document.getElementById('fee').value);
   const info = document.getElementById('feeInfo');
@@ -469,6 +622,22 @@ async function roadKm(a, b){
 
 /* ── 計算 ─────────────────────────────── */
 async function calculate(){
+  const pickAddr = document.getElementById('pickLoc').value.trim();
+  const dropAddr = document.getElementById('dropLoc').value.trim();
+
+  // 先做黑名單檢查
+  const hits = checkBlacklist(pickAddr, dropAddr);
+  if(hits.length > 0){
+    const lines = hits.map(h => `• ${h.addr}${h.note ? `（${h.note}）` : ''}`).join('\n');
+    document.getElementById('blWarnBody').textContent = '以下地址在黑名單中：\n' + lines;
+    document.getElementById('blWarn').classList.add('show');
+    document.getElementById('blWarn').scrollIntoView({behavior:'smooth', block:'nearest'});
+    return;
+  }
+  doCalculate();
+}
+
+async function doCalculate(){
   const btn = document.getElementById('calcBtn');
   btn.textContent='查詢路網距離…'; btn.style.opacity='.7'; btn.disabled=true;
 
