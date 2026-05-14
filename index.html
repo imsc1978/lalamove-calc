@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v19</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>接單效益計算 v20</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -42,6 +42,15 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
 
 .sec-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);
   text-transform:uppercase;margin:18px 0 8px;}
+
+/* 分頁 */
+.tab-bar{display:flex;background:var(--card);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;margin:0 -16px 16px;}
+.tab-btn{flex:1;padding:14px 8px;font-size:14px;font-weight:700;font-family:'Noto Sans TC',sans-serif;
+  background:none;border:none;color:var(--muted2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
 
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;}
 
@@ -203,6 +212,15 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
   <div class="logo">LALA<span>CALC</span></div>
 </div>
 
+<!-- 分頁導覽 -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabCalcBtn" onclick="switchTab('calc')">▶ 計算</button>
+  <button class="tab-btn" id="tabBlBtn" onclick="switchTab('bl')">🚫 黑名單</button>
+</div>
+
+<!-- ══ 計算頁 ══ -->
+<div class="tab-pane active" id="tabCalc">
+
 <!-- 捷徑自動帶入橫幅 -->
 <div class="auto-banner" id="autoBanner">
   <div style="font-size:22px">⚡</div>
@@ -306,41 +324,14 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
 
 <button class="calc-btn" id="calcBtn" onclick="calculate()">▶ 計算接單效益</button>
 
-<!-- 黑名單管理 -->
-<div class="sec-label" style="margin-top:24px">🚫 拒接地址黑名單</div>
-<div class="card">
-  <div id="blList"><div class="bl-empty">尚無黑名單地址</div></div>
-  <div class="bl-add-row">
-    <input class="bl-input" id="blAddrInput" placeholder="輸入完整地址（如：台北市中山區中山北路二段92號）">
-    <input class="bl-input" id="blNoteInput" placeholder="備註原因（可留空）">
-    <button class="bl-add-btn" id="blAddBtn" onclick="addBlacklist()">＋ 加入黑名單</button>
-  </div>
-</div>
-
 <!-- 結果 -->
 <div class="result-card" id="resultCard">
   <div class="verdict" id="verdict"></div>
   <div class="result-grid">
-    <div class="r-item">
-      <div class="r-lbl">時薪</div>
-      <div class="r-val" id="rRph">--</div>
-      <div class="r-unit">元/小時</div>
-    </div>
-    <div class="r-item">
-      <div class="r-lbl">總時間</div>
-      <div class="r-val" id="rTime">--</div>
-      <div class="r-unit">分鐘</div>
-    </div>
-    <div class="r-item">
-      <div class="r-lbl">總距離</div>
-      <div class="r-val" id="rDist">--</div>
-      <div class="r-unit">公里</div>
-    </div>
-    <div class="r-item">
-      <div class="r-lbl">訂單金額</div>
-      <div class="r-val" id="rFee">--</div>
-      <div class="r-unit">元</div>
-    </div>
+    <div class="r-item"><div class="r-lbl">時薪</div><div class="r-val" id="rRph">--</div><div class="r-unit">元/小時</div></div>
+    <div class="r-item"><div class="r-lbl">總時間</div><div class="r-val" id="rTime">--</div><div class="r-unit">分鐘</div></div>
+    <div class="r-item"><div class="r-lbl">總距離</div><div class="r-val" id="rDist">--</div><div class="r-unit">公里</div></div>
+    <div class="r-item"><div class="r-lbl">訂單金額</div><div class="r-val" id="rFee">--</div><div class="r-unit">元</div></div>
   </div>
   <div class="breakdown">
     <div class="bk"><span class="bk-k">空跑（我→起點）</span><span class="bk-v" id="bDead">--</span></div>
@@ -351,12 +342,36 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
   </div>
 </div>
 
+</div><!-- /tabCalc -->
+
+<!-- ══ 黑名單頁 ══ -->
+<div class="tab-pane" id="tabBl">
+  <div class="sec-label">🚫 拒接地址黑名單</div>
+  <div class="card">
+    <div id="blList"><div class="bl-empty">尚無黑名單地址</div></div>
+    <div class="bl-add-row">
+      <input class="bl-input" id="blAddrInput" placeholder="輸入完整地址（如：台北市中山區中山北路二段92號）">
+      <input class="bl-input" id="blNoteInput" placeholder="備註原因（可留空）">
+      <button class="bl-add-btn" id="blAddBtn" onclick="addBlacklist()">＋ 加入黑名單</button>
+    </div>
+  </div>
+</div><!-- /tabBl -->
+
 </div><!-- /app -->
 
 <script>
 /* ── 全域狀態 ── */
 var speedKmh = 30, threshold = 200, deadOn = true, myCoords = null;
 var blacklist = JSON.parse(localStorage.getItem('lalamove_blacklist') || '[]');
+
+/* ── 分頁切換 ── */
+function switchTab(tab){
+  document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
+  document.getElementById('tabBl').classList.toggle('active', tab==='bl');
+  document.getElementById('tabCalcBtn').classList.toggle('active', tab==='calc');
+  document.getElementById('tabBlBtn').classList.toggle('active', tab==='bl');
+  window.scrollTo(0,0);
+}
 
 /* ── 黑名單 ── */
 function saveBlacklist(){ localStorage.setItem('lalamove_blacklist', JSON.stringify(blacklist)); }
@@ -382,6 +397,7 @@ function addBlacklist(pre){
   // 從起點/終點按鈕呼叫：pre 是地址字串
   if(pre !== undefined){
     if(pre === ''){ alert('起點或終點尚無地址'); return; }
+    switchTab('bl');
     ae.value = pre; ne.value = '';
     ae.scrollIntoView({behavior:'smooth',block:'center'}); ae.focus(); return;
   }
