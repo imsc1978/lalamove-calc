@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>接單效益計算 v20</title>
+<title>接單效益計算 v21</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -331,7 +331,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
     <div class="r-item"><div class="r-lbl">時薪</div><div class="r-val" id="rRph">--</div><div class="r-unit">元/小時</div></div>
     <div class="r-item"><div class="r-lbl">總時間</div><div class="r-val" id="rTime">--</div><div class="r-unit">分鐘</div></div>
     <div class="r-item"><div class="r-lbl">總距離</div><div class="r-val" id="rDist">--</div><div class="r-unit">公里</div></div>
-    <div class="r-item"><div class="r-lbl">訂單金額</div><div class="r-val" id="rFee">--</div><div class="r-unit">元</div></div>
+    <div class="r-item"><div class="r-lbl">訂單金額</div><div class="r-val" id="rFee">--</div><div class="r-unit">原價 / 實收</div></div>
   </div>
   <div class="breakdown">
     <div class="bk"><span class="bk-k">空跑（我→起點）</span><span class="bk-v" id="bDead">--</span></div>
@@ -578,7 +578,7 @@ function showResult(fee,actualFee,deadKm,delivKm,totalKm,driveMin,waitMin,totalM
   document.getElementById('rRph').textContent=Math.round(rph);
   document.getElementById('rTime').textContent=Math.round(totalMin);
   document.getElementById('rDist').textContent=totalKm.toFixed(1);
-  document.getElementById('rFee').textContent=actualFee+' (原'+fee+')';
+  document.getElementById('rFee').textContent=fee+' / '+actualFee;
   document.getElementById('bDead').textContent=deadOn?deadKm.toFixed(1)+' km':'未計入';
   document.getElementById('bDeliv').textContent=delivKm.toFixed(1)+' km';
   document.getElementById('bDrive').textContent=Math.round(driveMin)+' 分鐘';
