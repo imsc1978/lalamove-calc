@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接單效益計算 v18</title>
+<title>接單效益計算 v19</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -354,377 +354,235 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans
 </div><!-- /app -->
 
 <script>
-/* ── 狀態 ─────────────────────────────── */
-let speedKmh = 30;
-let threshold = 200;
-let deadOn = true;
-let myCoords = null;
+/* ── 全域狀態 ── */
+var speedKmh = 30, threshold = 200, deadOn = true, myCoords = null;
+var blacklist = JSON.parse(localStorage.getItem('lalamove_blacklist') || '[]');
 
-/* ── 讀取 URL 參數（捷徑傳入） ───────── */
-(function loadParams(){
-  const p = new URLSearchParams(location.search);
-  let hasAuto = false;
-  const pick = p.get('pick');
-  const drop = p.get('drop');
-  const fee  = p.get('fee');
-  if(pick){ 
-    const pickClean = decodeURIComponent(pick).replace(/\s+/g,'');
-    document.getElementById('pickLoc').value = pickClean; 
-    document.getElementById('pickLoc').classList.add('hi'); 
-    hasAuto=true; 
-  }
-  if(drop){ 
-    const dropClean = decodeURIComponent(drop).replace(/\s+/g,'');
-    document.getElementById('dropLoc').value = dropClean; 
-    document.getElementById('dropLoc').classList.add('hi'); 
-    hasAuto=true; 
-  }
-  if(fee) { document.getElementById('fee').value = decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
-  if(hasAuto) document.getElementById('autoBanner').classList.add('show');
-  updateFeeInfo();
-  // 初始化 toggle 顏色
-  document.getElementById('deadTog').style.background = '#FF6B00';
-  // 渲染黑名單
-  renderBlacklist();
-})();
-
-/* ── 黑名單 ───────────────────────────── */
-let blacklist = JSON.parse(localStorage.getItem('lalamove_blacklist') || '[]');
-let pendingCalc = false;
-
-function saveBlacklist(){
-  localStorage.setItem('lalamove_blacklist', JSON.stringify(blacklist));
-}
+/* ── 黑名單 ── */
+function saveBlacklist(){ localStorage.setItem('lalamove_blacklist', JSON.stringify(blacklist)); }
 
 function renderBlacklist(){
   var el = document.getElementById('blList');
-  if(blacklist.length === 0){
-    el.innerHTML = '<div class="bl-empty">尚無黑名單地址</div>';
-    return;
+  if(!blacklist.length){ el.innerHTML = '<div class="bl-empty">尚無黑名單地址</div>'; return; }
+  var h = '';
+  for(var i=0;i<blacklist.length;i++){
+    var it = blacklist[i];
+    h += '<div class="bl-item"><div style="flex:1"><div class="bl-addr">'+it.addr+'</div>'
+       + (it.note ? '<div class="bl-note">📝 '+it.note+'</div>' : '')
+       + '</div><div style="display:flex;gap:6px;flex-shrink:0">'
+       + '<button class="bl-del" style="background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.3);color:var(--orange)" onclick="editBlacklist('+i+')">編輯</button>'
+       + '<button class="bl-del" onclick="delBlacklist('+i+')">刪除</button>'
+       + '</div></div>';
   }
-  var html = '';
-  for(var i=0; i<blacklist.length; i++){
-    var item = blacklist[i];
-    html += '<div class="bl-item" id="bl-item-' + i + '">';
-    html += '<div style="flex:1">';
-    html += '<div class="bl-addr">' + item.addr + '</div>';
-    if(item.note) html += '<div class="bl-note">📝 ' + item.note + '</div>';
-    html += '</div>';
-    html += '<div style="display:flex;gap:6px;flex-shrink:0">';
-    html += '<button class="bl-del" style="background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.3);color:var(--orange)" onclick="editBlacklist(' + i + ')">編輯</button>';
-    html += '<button class="bl-del" onclick="delBlacklist(' + i + ')">刪除</button>';
-    html += '</div></div>';
-  }
-  el.innerHTML = html;
-}
+  el.innerHTML = h;
 }
 
-function addBlacklist(prefillAddr){
-  var addrEl = document.getElementById('blAddrInput');
-  var noteEl = document.getElementById('blNoteInput');
-  var btnEl  = document.getElementById('blAddBtn');
-  if(prefillAddr){
-    addrEl.value = prefillAddr;
-    noteEl.value = '';
-    addrEl.scrollIntoView({behavior:'smooth', block:'center'});
-    addrEl.focus();
-    return;
+function addBlacklist(pre){
+  var ae=document.getElementById('blAddrInput'), ne=document.getElementById('blNoteInput'), be=document.getElementById('blAddBtn');
+  // 從起點/終點按鈕呼叫：pre 是地址字串
+  if(pre !== undefined){
+    if(pre === ''){ alert('起點或終點尚無地址'); return; }
+    ae.value = pre; ne.value = '';
+    ae.scrollIntoView({behavior:'smooth',block:'center'}); ae.focus(); return;
   }
-  var addr = addrEl.value.trim();
-  var note = noteEl.value.trim();
+  // 從「加入黑名單」按鈕呼叫：pre 是 undefined
+  var addr = ae.value.trim(), note = ne.value.trim();
   if(!addr){ alert('請輸入地址'); return; }
-  var normalized = addr.replace(/臺/g,'台');
-  var editIdxStr = btnEl.getAttribute('data-edit-idx');
-  var editIdx = editIdxStr !== null ? parseInt(editIdxStr) : -1;
-
-  if(editIdx >= 0){
-    blacklist[editIdx] = { addr: normalized, note: note };
-    btnEl.textContent = '＋ 加入黑名單';
-    btnEl.removeAttribute('data-edit-idx');
+  var norm = addr.replace(/臺/g,'台');
+  var ei = be.getAttribute('data-edit-idx');
+  var idx = (ei !== null && ei !== '') ? parseInt(ei) : -1;
+  if(idx >= 0){
+    blacklist[idx] = {addr:norm, note:note};
+    be.textContent = '＋ 加入黑名單'; be.removeAttribute('data-edit-idx');
   } else {
-    for(var i=0; i<blacklist.length; i++){
-      if(blacklist[i].addr === normalized){ alert('此地址已在黑名單中'); return; }
-    }
-    blacklist.push({ addr: normalized, note: note });
+    for(var j=0;j<blacklist.length;j++){ if(blacklist[j].addr===norm){ alert('此地址已在黑名單中'); return; } }
+    blacklist.push({addr:norm, note:note});
   }
-  saveBlacklist();
-  renderBlacklist();
-  addrEl.value = '';
-  noteEl.value = '';
+  saveBlacklist(); renderBlacklist(); ae.value=''; ne.value='';
+  alert('已加入黑名單');
 }
 
 function editBlacklist(i){
-  const item = blacklist[i];
-  document.getElementById('blAddrInput').value = item.addr;
-  document.getElementById('blNoteInput').value = item.note || '';
-  const btn = document.getElementById('blAddBtn');
-  btn.textContent = '✏️ 更新黑名單';
-  btn.setAttribute('data-edit-idx', i);
-  document.getElementById('blAddrInput').scrollIntoView({behavior:'smooth', block:'center'});
+  var it=blacklist[i], be=document.getElementById('blAddBtn');
+  document.getElementById('blAddrInput').value = it.addr;
+  document.getElementById('blNoteInput').value = it.note||'';
+  be.textContent='✏️ 更新黑名單'; be.setAttribute('data-edit-idx',i);
+  document.getElementById('blAddrInput').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('blAddrInput').focus();
 }
 
-function delBlacklist(i){
-  blacklist.splice(i, 1);
-  saveBlacklist();
-  renderBlacklist();
-}
+function delBlacklist(i){ blacklist.splice(i,1); saveBlacklist(); renderBlacklist(); }
 
 function checkBlacklist(pick, drop){
-  function normalize(s){ return s.replace(/臺/g,'台').replace(/\s/g,''); }
-  var hits = [];
-  var bn, pickN = normalize(pick), dropN = normalize(drop);
-  for(var i=0; i<blacklist.length; i++){
-    bn = normalize(blacklist[i].addr);
-    if(pickN.includes(bn) || dropN.includes(bn)){
-      hits.push(blacklist[i]);
-    }
+  function n(s){ return s.replace(/臺/g,'台').replace(/\s/g,''); }
+  var hits=[], pn=n(pick), dn=n(drop);
+  for(var i=0;i<blacklist.length;i++){
+    var bn=n(blacklist[i].addr);
+    if(pn.indexOf(bn)>=0 || dn.indexOf(bn)>=0) hits.push(blacklist[i]);
   }
   return hits;
 }
 
-function cancelCalc(){
-  pendingCalc = false;
-  document.getElementById('blWarn').classList.remove('show');
-}
+function cancelCalc(){ document.getElementById('blWarn').classList.remove('show'); }
+function forceCalc(){ document.getElementById('blWarn').classList.remove('show'); doCalculate(); }
 
-function forceCalc(){
-  document.getElementById('blWarn').classList.remove('show');
-  doCalculate();
-}
-
-
+/* ── 實收金額 ── */
 function updateFeeInfo(){
-  var raw = parseFloat(document.getElementById('fee').value);
-  var info = document.getElementById('feeInfo');
-  if(!raw || isNaN(raw)){ info.textContent = ''; return; }
-  var actual = Math.ceil(raw * 0.75);
-  var cut    = raw - actual;
-  info.textContent = '實收 $' + actual + '　平台抽 $' + cut;
+  var raw=parseFloat(document.getElementById('fee').value), info=document.getElementById('feeInfo');
+  if(!raw||isNaN(raw)){ info.textContent=''; return; }
+  var actual=Math.ceil(raw*0.75);
+  info.textContent = '實收 $'+actual+'　平台抽 $'+Math.round(raw-actual);
 }
 
-/* ── 速度 ─────────────────────────────── */
+/* ── 速度/時薪/空跑 ── */
 function setSpeed(v){
-  speedKmh = v;
-  document.querySelectorAll('.speed-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.startsWith(v));
-  });
+  speedKmh=v;
+  document.querySelectorAll('.speed-btn').forEach(function(b){ b.classList.toggle('active', b.textContent.trim().indexOf(String(v))===0); });
 }
-
-/* ── 目標時薪 ─────────────────────────── */
 function setTh(v){
-  threshold = v;
-  document.getElementById('thInput').value = '';
-  document.querySelectorAll('.th-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent === '$'+v);
-  });
+  threshold=v; document.getElementById('thInput').value='';
+  document.querySelectorAll('.th-btn').forEach(function(b){ b.classList.toggle('active', b.textContent==='$'+v); });
 }
 function customTh(){
-  document.querySelectorAll('.th-btn').forEach(b=>b.classList.remove('active'));
-  threshold = parseFloat(document.getElementById('thInput').value)||200;
+  document.querySelectorAll('.th-btn').forEach(function(b){ b.classList.remove('active'); });
+  threshold=parseFloat(document.getElementById('thInput').value)||200;
 }
-
-/* ── 空跑切換 ─────────────────────────── */
 function toggleDead(){
-  deadOn = !deadOn;
-  const tog = document.getElementById('deadTog');
-  tog.classList.toggle('on', deadOn);
-  tog.style.background = deadOn ? '#FF6B00' : '#333';
+  deadOn=!deadOn;
+  var t=document.getElementById('deadTog');
+  t.classList.toggle('on',deadOn); t.style.background=deadOn?'#FF6B00':'#333';
 }
 
-/* ── GPS（修正定位權限處理） ──────────── */
+/* ── GPS ── */
 async function getGPS(){
-  const btn = document.getElementById('gpsBtn');
-  const banner = document.getElementById('geoBanner');
-  banner.classList.remove('show');
-
-  if(!navigator.geolocation){
-    alert('您的瀏覽器不支援定位功能');
-    return;
-  }
-
-  // 先用 Permissions API 檢查目前狀態（iOS Safari 支援）
+  var btn=document.getElementById('gpsBtn'), ban=document.getElementById('geoBanner');
+  ban.classList.remove('show');
+  if(!navigator.geolocation){ alert('不支援定位'); return; }
   if(navigator.permissions){
-    try{
-      const status = await navigator.permissions.query({name:'geolocation'});
-      if(status.state === 'denied'){
-        // 已被拒，直接顯示教學，不再呼叫 getCurrentPosition
-        banner.classList.add('show');
-        banner.scrollIntoView({behavior:'smooth', block:'nearest'});
-        return;
-      }
-    } catch(e){ /* 部分瀏覽器不支援，繼續執行 */ }
+    try{ var s=await navigator.permissions.query({name:'geolocation'}); if(s.state==='denied'){ ban.classList.add('show'); ban.scrollIntoView({behavior:'smooth',block:'nearest'}); return; } }catch(e){}
   }
-
-  btn.classList.add('spin');
-  btn.textContent = '⏳';
-
+  btn.classList.add('spin'); btn.textContent='⏳';
   navigator.geolocation.getCurrentPosition(
-    // 成功
-    pos => {
-      myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      btn.classList.remove('spin');
-      btn.textContent = '✅';
-      banner.classList.remove('show');
-
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${myCoords.lat}&lon=${myCoords.lng}&format=json&accept-language=zh-TW`)
-        .then(r=>r.json()).then(d=>{
-          const addr = d.display_name || `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
-          document.getElementById('myLoc').value = addr;
-        }).catch(()=>{
-          document.getElementById('myLoc').value = `${myCoords.lat.toFixed(5)},${myCoords.lng.toFixed(5)}`;
-        });
+    function(pos){
+      myCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      btn.classList.remove('spin'); btn.textContent='✅'; ban.classList.remove('show');
+      fetch('https://nominatim.openstreetmap.org/reverse?lat='+myCoords.lat+'&lon='+myCoords.lng+'&format=json&accept-language=zh-TW')
+        .then(function(r){return r.json();}).then(function(d){ document.getElementById('myLoc').value=d.display_name||(myCoords.lat.toFixed(5)+','+myCoords.lng.toFixed(5)); })
+        .catch(function(){ document.getElementById('myLoc').value=myCoords.lat.toFixed(5)+','+myCoords.lng.toFixed(5); });
     },
-    // 失敗
-    err => {
-      btn.classList.remove('spin');
-      btn.textContent = '📍';
-      if(err.code === 1){
-        // 權限被拒 → 顯示教學橫幅
-        banner.classList.add('show');
-        banner.scrollIntoView({behavior:'smooth', block:'nearest'});
-      } else if(err.code === 2){
-        alert('⚠️ 無法取得位置，請確認 GPS 已開啟');
-      } else if(err.code === 3){
-        alert('⚠️ 定位逾時，請稍後再試');
-      } else {
-        alert('⚠️ 定位失敗：' + err.message);
-      }
+    function(err){
+      btn.classList.remove('spin'); btn.textContent='📍';
+      if(err.code===1){ ban.classList.add('show'); ban.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+      else alert('⚠️ 定位失敗：'+err.message);
     },
-    { timeout: 10000, enableHighAccuracy: true }
+    {timeout:10000,enableHighAccuracy:true}
   );
 }
 
-/* ── Google Geocoding ─────────────────── */
+/* ── Geocoding ── */
 async function geocode(addr){
-  let normalized = addr.replace(/臺/g, '台');
-  // 去掉開頭的郵遞區號（3碼數字+空格）
-  normalized = normalized.replace(/^\d{3}\s*/, '');
-  // 去掉樓層、室、之類查詢無用的資訊
-  normalized = normalized
-    .replace(/\d+樓.*$/,'')
-    .replace(/之[\d一二三四五六七八九十]+$/,'')
-    .replace(/\s+/g,' ')
-    .trim();
-  // 確保有台灣地區標記
-  const q = (normalized.includes('台灣') || normalized.includes('Taiwan'))
-    ? normalized
-    : normalized + ', 台灣';
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW&region=TW`;
-  const res = await fetch(url);
-  const d   = await res.json();
-  if(d.status !== 'OK') throw new Error('地址查詢失敗：' + addr + '（' + d.status + '）');
-  return { lat: d.results[0].geometry.location.lat, lng: d.results[0].geometry.location.lng };
+  var n = addr.replace(/臺/g,'台');
+  n = n.replace(/^\d{3,6}\s*/,'');            // 去掉3~6碼郵遞區號
+  n = n.replace(/\d+樓.*$/,'');              // 去掉樓層以後
+  n = n.replace(/之[\d一二三四五六七八九十]+$/,''); // 去掉之X
+  n = n.trim();
+  // 確保查詢包含台灣地區
+  var q = (n.indexOf('台灣')>=0 || n.indexOf('Taiwan')>=0) ? n : n+', 台灣';
+  var r = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(q)+'&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW&region=TW');
+  var d = await r.json();
+  if(d.status!=='OK') throw new Error('地址查詢失敗：'+addr+'（'+d.status+'）');
+  return {lat:d.results[0].geometry.location.lat, lng:d.results[0].geometry.location.lng};
 }
 
-/* ── Google Directions API 路網距離 ─── */
-async function roadKm(a, b){
+/* ── 路網距離 ── */
+async function roadKm(a,b){
   try{
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&mode=driving&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW`;
-    const res  = await fetch(url);
-    const data = await res.json();
-    if(data.status === 'OK'){
-      let meters = 0;
-      data.routes[0].legs.forEach(leg => meters += leg.distance.value);
-      return meters / 1000;
-    }
-  } catch(e){}
-  // fallback：Haversine × 1.35
-  const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
-  const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    var r=await fetch('https://maps.googleapis.com/maps/api/directions/json?origin='+a.lat+','+a.lng+'&destination='+b.lat+','+b.lng+'&mode=driving&key=AIzaSyA7brHFAjRT02DEqGjqSnLOvgq9B03PojY&language=zh-TW');
+    var d=await r.json();
+    if(d.status==='OK'){ var m=0; d.routes[0].legs.forEach(function(l){m+=l.distance.value;}); return m/1000; }
+  }catch(e){}
+  var R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
+  var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
   return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s))*1.35;
 }
 
-/* ── 計算 ─────────────────────────────── */
+/* ── 計算 ── */
 async function calculate(){
-  var pickAddr = document.getElementById('pickLoc').value.trim();
-  var dropAddr = document.getElementById('dropLoc').value.trim();
-
-  var hits = checkBlacklist(pickAddr, dropAddr);
-  if(hits.length > 0){
-    var lines = '';
-    for(var i=0; i<hits.length; i++){
-      lines += '• ' + hits[i].addr + (hits[i].note ? '（' + hits[i].note + '）' : '') + '\n';
-    }
-    document.getElementById('blWarnBody').textContent = '以下地址在黑名單中：\n' + lines;
+  var pk=document.getElementById('pickLoc').value.trim(), dr=document.getElementById('dropLoc').value.trim();
+  var hits=checkBlacklist(pk,dr);
+  if(hits.length){
+    var lines=''; for(var i=0;i<hits.length;i++) lines+='• '+hits[i].addr+(hits[i].note?'（'+hits[i].note+'）':'')+'\n';
+    document.getElementById('blWarnBody').textContent='以下地址在黑名單中：\n'+lines;
     document.getElementById('blWarn').classList.add('show');
-    document.getElementById('blWarn').scrollIntoView({behavior:'smooth', block:'nearest'});
-    return;
+    document.getElementById('blWarn').scrollIntoView({behavior:'smooth',block:'nearest'}); return;
   }
   doCalculate();
 }
 
 async function doCalculate(){
-  const btn = document.getElementById('calcBtn');
+  var btn=document.getElementById('calcBtn');
   btn.textContent='查詢路網距離…'; btn.style.opacity='.7'; btn.disabled=true;
-
   try{
-    const fee     = parseFloat(document.getElementById('fee').value);
-    const waitMin = parseFloat(document.getElementById('waitMin').value)||0;
-    const pickAddr= document.getElementById('pickLoc').value.trim();
-    const dropAddr= document.getElementById('dropLoc').value.trim();
-    const myAddr  = document.getElementById('myLoc').value.trim();
-    const thRaw   = document.getElementById('thInput').value;
-    if(thRaw) threshold = parseFloat(thRaw)||200;
-
-    if(!fee)      throw new Error('請輸入訂單金額');
+    var fee=parseFloat(document.getElementById('fee').value);
+    var waitMin=parseFloat(document.getElementById('waitMin').value)||0;
+    var pickAddr=document.getElementById('pickLoc').value.trim();
+    var dropAddr=document.getElementById('dropLoc').value.trim();
+    var myAddr=document.getElementById('myLoc').value.trim();
+    var thRaw=document.getElementById('thInput').value;
+    if(thRaw) threshold=parseFloat(thRaw)||200;
+    if(!fee) throw new Error('請輸入訂單金額');
     if(!pickAddr) throw new Error('請輸入起點地址');
     if(!dropAddr) throw new Error('請輸入終點地址');
-    if(deadOn && !myAddr && !myCoords) throw new Error('請定位或輸入「我的位置」（空跑計算需要）');
-
-    const [pickC, dropC] = await Promise.all([geocode(pickAddr), geocode(dropAddr)]);
-
-    let deadKm = 0;
+    if(deadOn&&!myAddr&&!myCoords) throw new Error('請定位或輸入「我的位置」');
+    var cs=await Promise.all([geocode(pickAddr),geocode(dropAddr)]);
+    var pickC=cs[0], dropC=cs[1], deadKm=0;
     if(deadOn){
-      const myC = myCoords || await geocode(myAddr);
-      deadKm = await roadKm(myC, pickC);
-      document.getElementById('d1tag').textContent = `空跑 ${deadKm.toFixed(1)} km`;
+      var myC=myCoords||await geocode(myAddr);
+      deadKm=await roadKm(myC,pickC);
+      document.getElementById('d1tag').textContent='空跑 '+deadKm.toFixed(1)+' km';
       document.getElementById('d1tag').classList.add('ok');
     }
-
-    const delivKm = await roadKm(pickC, dropC);
-    document.getElementById('d2tag').textContent = `送達 ${delivKm.toFixed(1)} km`;
+    var delivKm=await roadKm(pickC,dropC);
+    document.getElementById('d2tag').textContent='送達 '+delivKm.toFixed(1)+' km';
     document.getElementById('d2tag').classList.add('ok');
-
-    const totalKm  = deadOn ? deadKm+delivKm : delivKm;
-    const driveMin = (totalKm/speedKmh)*60;
-    const totalMin = driveMin+waitMin;
-    const actualFee = Math.ceil(fee * 0.75); // 平台抽25%，無條件進位
-    const rph      = actualFee/(totalMin/60);
-
-    showResult({fee, actualFee, deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph});
-
-  } catch(e){
-    alert('⚠️ '+e.message);
-  } finally{
-    btn.textContent='▶ 計算接單效益'; btn.style.opacity='1'; btn.disabled=false;
-  }
+    var totalKm=deadOn?deadKm+delivKm:delivKm;
+    var driveMin=(totalKm/speedKmh)*60, totalMin=driveMin+waitMin;
+    var actualFee=Math.ceil(fee*0.75), rph=actualFee/(totalMin/60);
+    showResult(fee,actualFee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph);
+  }catch(e){ alert('⚠️ '+e.message); }
+  finally{ btn.textContent='▶ 計算接單效益'; btn.style.opacity='1'; btn.disabled=false; }
 }
 
-function showResult({fee, actualFee, deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph}){
-  const card = document.getElementById('resultCard');
-  card.classList.add('show');
-
-  const ratio = rph/threshold;
-  const v = document.getElementById('verdict');
-  if(ratio>=1){        v.textContent='✅ 建議接單'; v.className='verdict good'; }
+function showResult(fee,actualFee,deadKm,delivKm,totalKm,driveMin,waitMin,totalMin,rph){
+  var card=document.getElementById('resultCard'); card.classList.add('show');
+  var ratio=rph/threshold, v=document.getElementById('verdict');
+  if(ratio>=1){ v.textContent='✅ 建議接單'; v.className='verdict good'; }
   else if(ratio>=.75){ v.textContent='⚠️ 勉強可接'; v.className='verdict mid'; }
-  else{                v.textContent='❌ 不建議接'; v.className='verdict bad'; }
-
-  document.getElementById('rRph').textContent  = Math.round(rph);
-  document.getElementById('rTime').textContent = Math.round(totalMin);
-  document.getElementById('rDist').textContent = totalKm.toFixed(1);
-  document.getElementById('rFee').textContent  = actualFee + ' (原' + fee + ')';
-
-  document.getElementById('bDead').textContent  = deadOn ? deadKm.toFixed(1)+' km' : '未計入';
-  document.getElementById('bDeliv').textContent = delivKm.toFixed(1)+' km';
-  document.getElementById('bDrive').textContent = Math.round(driveMin)+' 分鐘';
-  document.getElementById('bWait').textContent  = waitMin+' 分鐘';
-  document.getElementById('bTotal').textContent = '$'+Math.round(rph)+' / 小時（實收 $'+actualFee+'）';
-
+  else{ v.textContent='❌ 不建議接'; v.className='verdict bad'; }
+  document.getElementById('rRph').textContent=Math.round(rph);
+  document.getElementById('rTime').textContent=Math.round(totalMin);
+  document.getElementById('rDist').textContent=totalKm.toFixed(1);
+  document.getElementById('rFee').textContent=actualFee+' (原'+fee+')';
+  document.getElementById('bDead').textContent=deadOn?deadKm.toFixed(1)+' km':'未計入';
+  document.getElementById('bDeliv').textContent=delivKm.toFixed(1)+' km';
+  document.getElementById('bDrive').textContent=Math.round(driveMin)+' 分鐘';
+  document.getElementById('bWait').textContent=waitMin+' 分鐘';
+  document.getElementById('bTotal').textContent='$'+Math.round(rph)+' / 小時（實收 $'+actualFee+'）';
   card.scrollIntoView({behavior:'smooth',block:'start'});
 }
-</script>
 
+/* ── 初始化（最後執行） ── */
+(function init(){
+  var p=new URLSearchParams(location.search), hasAuto=false;
+  var pick=p.get('pick'), drop=p.get('drop'), fee=p.get('fee');
+  if(pick){ document.getElementById('pickLoc').value=decodeURIComponent(pick).replace(/\s+/g,''); document.getElementById('pickLoc').classList.add('hi'); hasAuto=true; }
+  if(drop){ document.getElementById('dropLoc').value=decodeURIComponent(drop).replace(/\s+/g,''); document.getElementById('dropLoc').classList.add('hi'); hasAuto=true; }
+  if(fee){ document.getElementById('fee').value=decodeURIComponent(fee); document.getElementById('fee').classList.add('hi'); hasAuto=true; }
+  if(hasAuto) document.getElementById('autoBanner').classList.add('show');
+  updateFeeInfo();
+  document.getElementById('deadTog').style.background='#FF6B00';
+  renderBlacklist();
+})();
+</script>
 </body>
 </html>
