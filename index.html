@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>接單效益計算 v21</title>
+<title>接單效益計算 v22</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -430,11 +430,33 @@ function editBlacklist(i){
 function delBlacklist(i){ blacklist.splice(i,1); saveBlacklist(); renderBlacklist(); }
 
 function checkBlacklist(pick, drop){
-  function n(s){ return s.replace(/臺/g,'台').replace(/\s/g,''); }
-  var hits=[], pn=n(pick), dn=n(drop);
+  function normalize(s){
+    return s.replace(/臺/g,'台').replace(/\s/g,'');
+  }
+  // 擷取地址關鍵片段：路/街/巷/弄名稱+號碼
+  function keySegment(s){
+    var n = normalize(s);
+    // 去掉前綴（台灣、郵遞區號、里名等）
+    n = n.replace(/^\d{3,6}/,'');
+    n = n.replace(/^台灣/,'');
+    n = n.replace(/^臺灣/,'');
+    // 擷取從「市/縣」之後的部分，去掉里名
+    n = n.replace(/[台臺][北南中東西][市縣]/,'');
+    n = n.replace(/[\u4e00-\u9fa5]{1,4}[區鄉鎮市]/,'');
+    n = n.replace(/[\u4e00-\u9fa5]{1,6}里/,'');
+    return n;
+  }
+  var hits = [];
+  var pickN = normalize(pick), dropN = normalize(drop);
+  var pickK = keySegment(pick), dropK = keySegment(drop);
   for(var i=0;i<blacklist.length;i++){
-    var bn=n(blacklist[i].addr);
-    if(pn.indexOf(bn)>=0 || dn.indexOf(bn)>=0) hits.push(blacklist[i]);
+    var bn = normalize(blacklist[i].addr);
+    var bk = keySegment(blacklist[i].addr);
+    // 完整比對 OR 關鍵片段比對
+    if( pickN.indexOf(bn)>=0 || dropN.indexOf(bn)>=0 ||
+        (bk.length>=4 && (pickK.indexOf(bk)>=0 || dropK.indexOf(bk)>=0)) ){
+      hits.push(blacklist[i]);
+    }
   }
   return hits;
 }
