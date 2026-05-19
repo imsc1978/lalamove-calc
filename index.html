@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>接單效益計算 v22</title>
+<title>接單效益計算 v23</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -492,14 +492,8 @@ function toggleDead(){
 }
 
 /* ── GPS ── */
-async function getGPS(){
+function startLocating(){
   var btn=document.getElementById('gpsBtn'), ban=document.getElementById('geoBanner');
-  ban.classList.remove('show');
-  if(!navigator.geolocation){ alert('不支援定位'); return; }
-  if(navigator.permissions){
-    try{ var s=await navigator.permissions.query({name:'geolocation'}); if(s.state==='denied'){ ban.classList.add('show'); ban.scrollIntoView({behavior:'smooth',block:'nearest'}); return; } }catch(e){}
-  }
-  btn.classList.add('spin'); btn.textContent='⏳';
   navigator.geolocation.getCurrentPosition(
     function(pos){
       myCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
@@ -511,10 +505,36 @@ async function getGPS(){
     function(err){
       btn.classList.remove('spin'); btn.textContent='📍';
       if(err.code===1){ ban.classList.add('show'); ban.scrollIntoView({behavior:'smooth',block:'nearest'}); }
-      else alert('⚠️ 定位失敗：'+err.message);
+      else if(err.code===2){ alert('⚠️ 無法取得位置，請確認 GPS 已開啟'); }
+      else if(err.code===3){ /* 逾時靜默失敗，讓使用者手動按 */ }
+      else{ alert('⚠️ 定位失敗：'+err.message); }
     },
     {timeout:10000,enableHighAccuracy:true}
   );
+}
+
+async function getGPS(){
+  var btn=document.getElementById('gpsBtn'), ban=document.getElementById('geoBanner');
+  ban.classList.remove('show');
+  if(!navigator.geolocation){ alert('不支援定位'); return; }
+  if(navigator.permissions){
+    try{ var s=await navigator.permissions.query({name:'geolocation'}); if(s.state==='denied'){ ban.classList.add('show'); ban.scrollIntoView({behavior:'smooth',block:'nearest'}); return; } }catch(e){}
+  }
+  btn.classList.add('spin'); btn.textContent='⏳';
+  startLocating();
+}
+
+function autoLocate(){
+  if(!navigator.geolocation) return;
+  if(navigator.permissions){
+    navigator.permissions.query({name:'geolocation'}).then(function(s){
+      if(s.state==='granted'){
+        document.getElementById('gpsBtn').classList.add('spin');
+        document.getElementById('gpsBtn').textContent='⏳';
+        startLocating();
+      }
+    }).catch(function(){});
+  }
 }
 
 /* ── Geocoding ── */
@@ -620,6 +640,7 @@ function showResult(fee,actualFee,deadKm,delivKm,totalKm,driveMin,waitMin,totalM
   updateFeeInfo();
   document.getElementById('deadTog').style.background='#FF6B00';
   renderBlacklist();
+  autoLocate();
 })();
 </script>
 </body>
