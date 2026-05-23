@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>接單效益計算 v23</title>
+<title>接單效益計算 v24</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 :root{
@@ -526,15 +526,24 @@ async function getGPS(){
 
 function autoLocate(){
   if(!navigator.geolocation) return;
-  if(navigator.permissions){
-    navigator.permissions.query({name:'geolocation'}).then(function(s){
-      if(s.state==='granted'){
-        document.getElementById('gpsBtn').classList.add('spin');
-        document.getElementById('gpsBtn').textContent='⏳';
-        startLocating();
-      }
-    }).catch(function(){});
-  }
+  document.getElementById('gpsBtn').classList.add('spin');
+  document.getElementById('gpsBtn').textContent='⏳';
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      myCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      document.getElementById('gpsBtn').classList.remove('spin');
+      document.getElementById('gpsBtn').textContent='✅';
+      fetch('https://nominatim.openstreetmap.org/reverse?lat='+myCoords.lat+'&lon='+myCoords.lng+'&format=json&accept-language=zh-TW')
+        .then(function(r){return r.json();}).then(function(d){ document.getElementById('myLoc').value=d.display_name||(myCoords.lat.toFixed(5)+','+myCoords.lng.toFixed(5)); })
+        .catch(function(){ document.getElementById('myLoc').value=myCoords.lat.toFixed(5)+','+myCoords.lng.toFixed(5); });
+    },
+    function(){
+      // 靜默失敗，讓使用者手動按
+      document.getElementById('gpsBtn').classList.remove('spin');
+      document.getElementById('gpsBtn').textContent='📍';
+    },
+    {timeout:8000,enableHighAccuracy:true}
+  );
 }
 
 /* ── Geocoding ── */
